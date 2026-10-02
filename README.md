@@ -25,3 +25,7 @@ Variables d'environnement requises : voir `.env.example`.
   chaque push et pull request.
 - **Protection de branche** sur `main` : la CI doit passer avant de
   fusionner une PR.
+
+## Déploiement
+
+Connecté à Vercel : preview sur chaque PR, prod sur merge vers `main`.
