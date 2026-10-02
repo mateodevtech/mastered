@@ -1,0 +1,13 @@
+{
+  "name": "Mastered",
+  "short_name": "Mastered",
+  "description": "Atteins tes objectifs, avec un Veilleur à tes côtés.",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#0a0a0a",
+  "theme_color": "#0a0a0a",
+  "icons": [
+    { "src": "/icon-192", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icon-512", "sizes": "512x512", "type": "image/png" }
+  ]
+}

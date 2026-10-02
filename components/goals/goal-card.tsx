@@ -1,0 +1,50 @@
+import Link from "next/link";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { GoalTypeBadge } from "@/components/goals/goal-type-label";
+import { GoalProgress } from "@/components/goals/goal-progress";
+import { StreakBadge } from "@/components/goals/streak-badge";
+
+type Goal = {
+  id: string;
+  title: string;
+  description: string | null;
+  type: string;
+};
+
+type Streak = {
+  currentCount: number;
+  freezesUsedThisMonth: number;
+  repairWindowExpiresAt: Date | string | null;
+};
+
+export function GoalCard({
+  goal,
+  progress,
+  streak,
+}: {
+  goal: Goal;
+  progress?: { done: number; total: number };
+  streak?: Streak | null;
+}) {
+  return (
+    <Link href={`/goals/${goal.id}`}>
+      <Card className="h-full transition-colors hover:ring-foreground/20">
+        <CardHeader>
+          <div className="flex items-center justify-between gap-2">
+            <CardTitle className="line-clamp-1">{goal.title}</CardTitle>
+            <GoalTypeBadge type={goal.type} />
+          </div>
+          {goal.description && (
+            <CardDescription className="line-clamp-2">{goal.description}</CardDescription>
+          )}
+          {streak && <StreakBadge streak={streak} />}
+        </CardHeader>
+        {progress && (
+          <CardContent>
+            <GoalProgress done={progress.done} total={progress.total} />
+          </CardContent>
+        )}
+      </Card>
+    </Link>
+  );
+}

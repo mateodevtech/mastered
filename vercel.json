@@ -1,0 +1,12 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/deadline-sweep",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/streak-maintenance",
+      "schedule": "0 2 * * *"
+    }
+  ]
+}
