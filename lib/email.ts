@@ -1,7 +1,15 @@
 import "server-only";
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Constructed lazily, not at module scope: the Resend SDK throws
+// immediately if the API key is missing, which would otherwise crash
+// Next.js's build-time route analysis in environments with no secrets
+// configured (e.g. CI running only lint/typecheck/test, no real .env).
+let resend: Resend | null = null;
+function getResendClient(): Resend {
+  if (!resend) resend = new Resend(process.env.RESEND_API_KEY);
+  return resend;
+}
 
 // resend.dev's shared sender works without a verified domain, but Resend
 // only delivers it to the account owner's own address — fine for solo MVP
@@ -9,7 +17,7 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM = "Mastered <onboarding@resend.dev>";
 
 export async function sendLoginEmail(to: string, url: string) {
-  await resend.emails.send({
+  await getResendClient().emails.send({
     from: FROM,
     to,
     subject: "Ton lien de connexion Mastered",
@@ -27,7 +35,7 @@ export async function sendVeilleurInviteEmail(
   inviterName: string,
   goalTitle: string,
 ) {
-  await resend.emails.send({
+  await getResendClient().emails.send({
     from: FROM,
     to,
     subject: `${inviterName} t'invite à devenir son Veilleur`,
@@ -45,7 +53,7 @@ export async function sendVeilleurMissedDeadlineEmail(
   goalTitle: string,
   taskTitle: string,
 ) {
-  await resend.emails.send({
+  await getResendClient().emails.send({
     from: FROM,
     to,
     subject: `${ownerName} a besoin de ton soutien`,
@@ -69,7 +77,7 @@ export async function sendVeilleurResponseEmail(
     extend: "a prolongé ton échéance",
   };
 
-  await resend.emails.send({
+  await getResendClient().emails.send({
     from: FROM,
     to,
     subject: `${veilleurName} ${actionText[action]}`,

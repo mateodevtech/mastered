@@ -2,7 +2,7 @@ import "server-only";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { pushSubscriptions } from "@/lib/db/schema";
-import { webpush } from "./vapid";
+import { ensureConfigured, webpush } from "./vapid";
 
 export type PushPayload = {
   taskId: string;
@@ -13,6 +13,8 @@ export type PushPayload = {
 };
 
 export async function sendPushToUser(userId: string, payload: PushPayload) {
+  ensureConfigured();
+
   const subs = await db.query.pushSubscriptions.findMany({
     where: eq(pushSubscriptions.userId, userId),
   });
