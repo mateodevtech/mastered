@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { goals, proofs, tasks, users, veilleurRelationships, veilleurResponses } from "@/lib/db/schema";
@@ -29,13 +29,13 @@ export async function POST(request: Request) {
   if (!goal) return NextResponse.json({ error: "Introuvable" }, { status: 404 });
 
   const relationship = await db.query.veilleurRelationships.findFirst({
-    where: eq(veilleurRelationships.goalId, task.goalId),
+    where: and(
+      eq(veilleurRelationships.goalId, task.goalId),
+      eq(veilleurRelationships.veilleurUserId, user.id),
+      eq(veilleurRelationships.status, "active"),
+    ),
   });
-  if (
-    !relationship ||
-    relationship.veilleurUserId !== user.id ||
-    relationship.status !== "active"
-  ) {
+  if (!relationship) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
   }
 

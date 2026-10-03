@@ -16,6 +16,13 @@ export async function getVeilleurRelationshipForGoal(goalId: string) {
   });
 }
 
+export async function listVeilleurRelationshipsForGoal(goalId: string) {
+  return db.query.veilleurRelationships.findMany({
+    where: eq(veilleurRelationships.goalId, goalId),
+    orderBy: [desc(veilleurRelationships.invitedAt)],
+  });
+}
+
 // Access check for the Veilleur-facing goal view: the goal owner can
 // always see it, otherwise only the goal's active Veilleur can.
 export async function getVeilleurAccessibleGoal(goalId: string, userId: string) {

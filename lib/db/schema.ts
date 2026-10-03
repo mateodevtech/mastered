@@ -161,8 +161,12 @@ export const veilleurRelationships = pgTable(
     acceptedAt: timestamp("accepted_at", { withTimezone: true }),
   },
   (t) => ({
-    // MVP constraint: one Veilleur per goal.
-    oneVeilleurPerGoal: uniqueIndex("one_veilleur_per_goal").on(t.goalId),
+    // A goal can now have several Veilleurs, but never two invitations to
+    // the same email — re-inviting an email updates its existing row.
+    oneRelationshipPerEmail: uniqueIndex("one_relationship_per_goal_email").on(
+      t.goalId,
+      t.invitedEmail,
+    ),
   }),
 );
 

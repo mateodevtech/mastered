@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/auth/session";
 import { getGoalForUser } from "@/lib/db/queries/goals";
-import { getVeilleurRelationshipForGoal } from "@/lib/db/queries/veilleur";
 import { db } from "@/lib/db";
 import { veilleurRelationships } from "@/lib/db/schema";
 import { createMagicLinkToken } from "@/lib/auth/magic-link";
@@ -25,10 +24,18 @@ export async function POST(request: Request) {
   const goal = await getGoalForUser(parsed.data.goalId, user.id);
   if (!goal) return NextResponse.json({ error: "Objectif introuvable" }, { status: 404 });
 
-  const existing = await getVeilleurRelationshipForGoal(goal.id);
+  // A goal can have several Veilleurs, but never two invitations to the
+  // same email — re-inviting an email just refreshes its existing row.
+  const existing = await db.query.veilleurRelationships.findFirst({
+    where: and(
+      eq(veilleurRelationships.goalId, goal.id),
+      eq(veilleurRelationships.invitedEmail, parsed.data.email),
+    ),
+  });
+
   if (existing?.status === "active") {
     return NextResponse.json(
-      { error: "Un Veilleur est déjà actif sur cet objectif" },
+      { error: "Cette personne est déjà Veilleur actif sur cet objectif" },
       { status: 400 },
     );
   }
@@ -36,7 +43,7 @@ export async function POST(request: Request) {
   if (existing) {
     await db
       .update(veilleurRelationships)
-      .set({ invitedEmail: parsed.data.email, invitedAt: new Date() })
+      .set({ invitedAt: new Date() })
       .where(eq(veilleurRelationships.id, existing.id));
   } else {
     await db.insert(veilleurRelationships).values({
