@@ -1,36 +1,37 @@
 import "server-only";
-import { Resend } from "resend";
+import nodemailer from "nodemailer";
+import type { Transporter } from "nodemailer";
 
-// Constructed lazily, not at module scope: the Resend SDK throws
-// immediately if the API key is missing, which would otherwise crash
-// Next.js's build-time route analysis in environments with no secrets
-// configured (e.g. CI running only lint/typecheck/test, no real .env).
-let resend: Resend | null = null;
-function getResendClient(): Resend {
-  if (!resend) resend = new Resend(process.env.RESEND_API_KEY);
-  return resend;
+// Constructed lazily, not at module scope: creating the transporter
+// doesn't itself fail on missing credentials, but we still want the same
+// "don't touch secrets until something actually sends" shape as before.
+let transporter: Transporter | null = null;
+function getTransporter(): Transporter {
+  if (!transporter) {
+    transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.GMAIL_USER,
+        pass: process.env.GMAIL_APP_PASSWORD,
+      },
+    });
+  }
+  return transporter;
 }
 
-// resend.dev's shared sender works without a verified domain, but Resend
-// only delivers it to the account owner's own address — fine for solo MVP
-// testing, swap for a verified "from" domain before inviting real users.
-const FROM = "Mastered <onboarding@resend.dev>";
+// Gmail SMTP has no sandbox restriction (unlike Resend's shared sender,
+// which only delivers to the account owner) — fine for Mastered's current
+// scale, but Gmail enforces a ~500/day sending limit and may flag higher
+// volume as spam. Swap for a verified transactional domain if that's ever
+// a real constraint.
+const FROM = `Mastered <${process.env.GMAIL_USER}>`;
 
-// The Resend SDK does NOT throw on a failed send — it resolves with
-// { data: null, error }. Callers awaiting .send() directly would silently
-// swallow real failures (invalid key, sandbox restrictions, quota) and
-// report success to the user. Route every send through this so failures
-// surface as thrown errors instead.
-async function send(params: Parameters<Resend["emails"]["send"]>[0]) {
-  const { error } = await getResendClient().emails.send(params);
-  if (error) {
-    throw new Error(`Resend: ${error.name} — ${error.message}`);
-  }
+async function send(params: { to: string; subject: string; html: string }) {
+  await getTransporter().sendMail({ from: FROM, ...params });
 }
 
 export async function sendLoginEmail(to: string, url: string) {
   await send({
-    from: FROM,
     to,
     subject: "Ton lien de connexion Mastered",
     html: `
@@ -48,7 +49,6 @@ export async function sendVeilleurInviteEmail(
   goalTitle: string,
 ) {
   await send({
-    from: FROM,
     to,
     subject: `${inviterName} t'invite à devenir son Veilleur`,
     html: `
@@ -66,7 +66,6 @@ export async function sendVeilleurMissedDeadlineEmail(
   taskTitle: string,
 ) {
   await send({
-    from: FROM,
     to,
     subject: `${ownerName} a besoin de ton soutien`,
     html: `
@@ -90,7 +89,6 @@ export async function sendVeilleurResponseEmail(
   };
 
   await send({
-    from: FROM,
     to,
     subject: `${veilleurName} ${actionText[action]}`,
     html: `
