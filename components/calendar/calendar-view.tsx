@@ -67,16 +67,26 @@ export function CalendarView({
             )}
             {goals.map((goal) => {
               const hidden = hiddenGoalIds.has(goal.id);
+              const count = tasks.filter((t) => t.goalId === goal.id).length;
               return (
-                <li key={goal.id}>
+                <li
+                  key={goal.id}
+                  className={`flex items-center gap-2 rounded-lg px-1.5 py-1 text-sm hover:bg-muted ${hidden ? "opacity-40" : ""}`}
+                >
                   <button
                     type="button"
                     onClick={() => toggleGoal(goal.id)}
-                    className={`flex w-full items-center gap-2 rounded-lg px-1.5 py-1 text-left text-sm hover:bg-muted ${hidden ? "opacity-40" : ""}`}
+                    title={hidden ? "Afficher cet objectif" : "Masquer cet objectif"}
+                    className="shrink-0"
                   >
                     <GlassFolder goalId={goal.id} size={22} />
-                    <span className="truncate">{goal.title}</span>
                   </button>
+                  <Link href={`/goals/${goal.id}`} className="min-w-0 flex-1 truncate hover:underline">
+                    {goal.title}
+                  </Link>
+                  <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
+                    {count > 0 ? count : ""}
+                  </span>
                 </li>
               );
             })}
@@ -101,6 +111,12 @@ export function CalendarView({
       </aside>
 
       <div className="flex-1 overflow-x-auto">
+        {tasks.length === 0 && (
+          <p className="mb-3 rounded-lg bg-muted px-3 py-2 text-sm text-muted-foreground">
+            Aucune tâche prévue cette semaine. Ajoute une échéance depuis la page d&apos;un
+            objectif pour la voir apparaître ici.
+          </p>
+        )}
         <div className="min-w-[720px]">
           <div className="grid grid-cols-[56px_repeat(7,1fr)] border-b">
             <div />
