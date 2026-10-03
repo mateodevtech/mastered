@@ -20,5 +20,6 @@ export async function GET(request: Request) {
 
   // TODO(M6): when record.purpose === "veilleur_invite", activate the
   // matching veilleurRelationships row and redirect to /veilleur/goal/[id].
-  return NextResponse.redirect(new URL("/dashboard", origin));
+  const destination = user.onboardedAt ? "/dashboard" : "/onboarding";
+  return NextResponse.redirect(new URL(destination, origin));
 }

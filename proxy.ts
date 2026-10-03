@@ -22,6 +22,7 @@ export const config = {
     "/dashboard/:path*",
     "/goals/:path*",
     "/calendar/:path*",
+    "/onboarding/:path*",
     "/tasks/:path*",
     "/alarm/:path*",
     "/settings/:path*",

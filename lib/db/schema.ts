@@ -21,6 +21,10 @@ export const users = pgTable("users", {
   displayName: text("display_name"),
   timezone: text("timezone").notNull().default("UTC"),
   isAdmin: boolean("is_admin").notNull().default(false),
+  // Null = hasn't completed the onboarding flow yet. No default, so
+  // adding this column also resets every pre-existing account to
+  // "needs onboarding" — intentional, not an oversight.
+  onboardedAt: timestamp("onboarded_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
