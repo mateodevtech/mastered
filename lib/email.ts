@@ -16,8 +16,20 @@ function getResendClient(): Resend {
 // testing, swap for a verified "from" domain before inviting real users.
 const FROM = "Mastered <onboarding@resend.dev>";
 
+// The Resend SDK does NOT throw on a failed send — it resolves with
+// { data: null, error }. Callers awaiting .send() directly would silently
+// swallow real failures (invalid key, sandbox restrictions, quota) and
+// report success to the user. Route every send through this so failures
+// surface as thrown errors instead.
+async function send(params: Parameters<Resend["emails"]["send"]>[0]) {
+  const { error } = await getResendClient().emails.send(params);
+  if (error) {
+    throw new Error(`Resend: ${error.name} — ${error.message}`);
+  }
+}
+
 export async function sendLoginEmail(to: string, url: string) {
-  await getResendClient().emails.send({
+  await send({
     from: FROM,
     to,
     subject: "Ton lien de connexion Mastered",
@@ -35,7 +47,7 @@ export async function sendVeilleurInviteEmail(
   inviterName: string,
   goalTitle: string,
 ) {
-  await getResendClient().emails.send({
+  await send({
     from: FROM,
     to,
     subject: `${inviterName} t'invite à devenir son Veilleur`,
@@ -53,7 +65,7 @@ export async function sendVeilleurMissedDeadlineEmail(
   goalTitle: string,
   taskTitle: string,
 ) {
-  await getResendClient().emails.send({
+  await send({
     from: FROM,
     to,
     subject: `${ownerName} a besoin de ton soutien`,
@@ -77,7 +89,7 @@ export async function sendVeilleurResponseEmail(
     extend: "a prolongé ton échéance",
   };
 
-  await getResendClient().emails.send({
+  await send({
     from: FROM,
     to,
     subject: `${veilleurName} ${actionText[action]}`,
