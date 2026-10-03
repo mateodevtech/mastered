@@ -1,5 +1,5 @@
 import "server-only";
-import { and, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { badges, goals, streaks } from "@/lib/db/schema";
 import { crossesBadgeThreshold } from "@/lib/streaks/grace";
@@ -18,8 +18,33 @@ export async function getStreaksForUser(userId: string) {
   return new Map(rows.map((r) => [r.streak.goalId, r.streak]));
 }
 
+// The goal with the longest current streak — the one worth featuring as
+// the dashboard's hero stat. Ties are broken by whichever streak row the
+// query returns first; not worth a secondary sort for a display pick.
+export async function getTopStreakForUser(userId: string) {
+  const rows = await db
+    .select({ streak: streaks, goalTitle: goals.title })
+    .from(streaks)
+    .innerJoin(goals, eq(streaks.goalId, goals.id))
+    .where(and(eq(goals.ownerId, userId), eq(goals.status, "active")))
+    .orderBy(desc(streaks.currentCount))
+    .limit(1);
+
+  return rows[0] ?? null;
+}
+
 export async function getBadgesForGoal(goalId: string) {
   return db.query.badges.findMany({ where: eq(badges.goalId, goalId) });
+}
+
+export async function getRecentBadgesForUser(userId: string, limit: number) {
+  return db
+    .select({ badge: badges, goalTitle: goals.title })
+    .from(badges)
+    .leftJoin(goals, eq(badges.goalId, goals.id))
+    .where(eq(badges.userId, userId))
+    .orderBy(desc(badges.awardedAt))
+    .limit(limit);
 }
 
 export async function getOrCreateStreak(goalId: string) {

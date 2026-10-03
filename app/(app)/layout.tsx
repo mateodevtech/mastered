@@ -27,6 +27,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <Link href="/goals" className="text-sm text-muted-foreground hover:text-foreground">
             Objectifs
           </Link>
+          <Link href="/calendar" className="text-sm text-muted-foreground hover:text-foreground">
+            Calendrier
+          </Link>
           <Link
             href="/settings"
             className="text-sm text-muted-foreground hover:text-foreground"

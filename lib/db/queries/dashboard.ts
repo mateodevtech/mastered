@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, eq, lte, sql } from "drizzle-orm";
+import { and, asc, eq, gte, lte, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { goals, tasks } from "@/lib/db/schema";
 
@@ -67,4 +67,74 @@ export async function getActiveBlockingAlarmForUser(userId: string) {
     .limit(1);
 
   return rows[0] ?? null;
+}
+
+export type DailyCompletion = { date: string; total: number; done: number };
+
+// One bucket per calendar day (user's local date, via deadline truncated
+// to day) over the last `days` days, including today — the dashboard
+// progression chart reads these buckets directly, no client aggregation.
+export async function getDailyCompletionForUser(
+  userId: string,
+  days: number,
+): Promise<DailyCompletion[]> {
+  const since = new Date();
+  since.setDate(since.getDate() - (days - 1));
+  since.setHours(0, 0, 0, 0);
+
+  const rows = await db
+    .select({
+      date: sql<string>`to_char(${tasks.deadline}, 'YYYY-MM-DD')`,
+      total: sql<number>`count(*)`.mapWith(Number),
+      done: sql<number>`count(*) filter (where ${tasks.status} = 'done')`.mapWith(Number),
+    })
+    .from(tasks)
+    .innerJoin(goals, eq(tasks.goalId, goals.id))
+    .where(and(eq(goals.ownerId, userId), gte(tasks.deadline, since)))
+    .groupBy(sql`to_char(${tasks.deadline}, 'YYYY-MM-DD')`);
+
+  const byDate = new Map(rows.map((r) => [r.date, r]));
+  const buckets: DailyCompletion[] = [];
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const key = d.toISOString().slice(0, 10);
+    const bucket = byDate.get(key);
+    buckets.push({ date: key, total: bucket?.total ?? 0, done: bucket?.done ?? 0 });
+  }
+  return buckets;
+}
+
+export type TodayCompletion = {
+  total: number;
+  done: number;
+  overdue: number;
+  blocking: number;
+};
+
+export async function getTodayCompletionForUser(userId: string): Promise<TodayCompletion> {
+  const startOfDay = new Date();
+  startOfDay.setHours(0, 0, 0, 0);
+  const endOfDay = new Date();
+  endOfDay.setHours(23, 59, 59, 999);
+  const now = new Date();
+
+  const rows = await db
+    .select({ task: tasks })
+    .from(tasks)
+    .innerJoin(goals, eq(tasks.goalId, goals.id))
+    .where(
+      and(eq(goals.ownerId, userId), gte(tasks.deadline, startOfDay), lte(tasks.deadline, endOfDay)),
+    );
+
+  let done = 0;
+  let overdue = 0;
+  let blocking = 0;
+  for (const { task } of rows) {
+    if (task.status === "done") done++;
+    if (task.status === "pending" && task.deadline.getTime() < now.getTime()) overdue++;
+    if (task.status === "pending" && task.notificationMode === "blocking") blocking++;
+  }
+
+  return { total: rows.length, done, overdue, blocking };
 }

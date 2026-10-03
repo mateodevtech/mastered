@@ -7,6 +7,7 @@ import { getGoalForUser } from "@/lib/db/queries/goals";
 import { getTaskById } from "@/lib/db/queries/tasks";
 import { resolveRepairWindowOnCompletion } from "@/lib/db/queries/streaks";
 import { submitProofSchema } from "@/lib/validators/proof";
+import { triggerWebhookEvent } from "@/lib/webhooks/dispatch";
 
 export async function POST(
   request: Request,
@@ -65,6 +66,13 @@ export async function POST(
   if (goal.type === "recurring") {
     await resolveRepairWindowOnCompletion(goal.id, user.id);
   }
+
+  await triggerWebhookEvent(user.id, "task.completed", {
+    taskId: task.id,
+    goalId: goal.id,
+    goalTitle: goal.title,
+    taskTitle: task.title,
+  });
 
   return NextResponse.json({ ok: true, proof });
 }

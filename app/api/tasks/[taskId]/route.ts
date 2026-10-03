@@ -7,6 +7,7 @@ import { getGoalForUser } from "@/lib/db/queries/goals";
 import { getTaskById } from "@/lib/db/queries/tasks";
 import { resolveRepairWindowOnCompletion } from "@/lib/db/queries/streaks";
 import { updateTaskSchema } from "@/lib/validators/tasks";
+import { triggerWebhookEvent } from "@/lib/webhooks/dispatch";
 
 async function assertOwnership(taskId: string, userId: string) {
   const task = await getTaskById(taskId);
@@ -74,6 +75,15 @@ export async function PATCH(
 
   if (parsed.data.status === "done" && goal.type === "recurring") {
     await resolveRepairWindowOnCompletion(goal.id, user.id);
+  }
+
+  if (parsed.data.status === "done") {
+    await triggerWebhookEvent(user.id, "task.completed", {
+      taskId: updated.id,
+      goalId: goal.id,
+      goalTitle: goal.title,
+      taskTitle: updated.title,
+    });
   }
 
   return NextResponse.json(updated);

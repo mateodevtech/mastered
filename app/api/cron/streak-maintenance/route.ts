@@ -10,6 +10,7 @@ import {
   isRepairWindowExpired,
   isSameFreezeMonth,
 } from "@/lib/streaks/grace";
+import { triggerWebhookEvent } from "@/lib/webhooks/dispatch";
 
 // Triggered once a day by Vercel Cron (see vercel.json) — guarded by
 // CRON_SECRET. Evaluates "the week that just ended" for every recurring
@@ -60,6 +61,11 @@ export async function GET(request: Request) {
         })
         .where(eq(streaks.id, streak.id));
       reset++;
+      await triggerWebhookEvent(goal.ownerId, "streak.broken", {
+        goalId: goal.id,
+        goalTitle: goal.title,
+        previousCount: streak.currentCount,
+      });
       continue;
     }
 
@@ -129,6 +135,11 @@ export async function GET(request: Request) {
             label,
           });
           badgesAwarded++;
+          await triggerWebhookEvent(goal.ownerId, "streak.milestone", {
+            goalId: goal.id,
+            goalTitle: goal.title,
+            streakCount: decision.newCount,
+          });
         }
       }
     } else if (decision.kind === "freeze") {
