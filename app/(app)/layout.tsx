@@ -37,7 +37,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             Réglages
           </Link>
         </nav>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
+          <span className="hidden text-sm text-muted-foreground sm:inline">
+            {user.displayName ?? user.email}
+          </span>
           <ThemeToggle />
           <form action="/api/auth/logout" method="post">
             <Button type="submit" variant="ghost" size="sm">
