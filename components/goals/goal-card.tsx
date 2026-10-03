@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { GoalTypeBadge } from "@/components/goals/goal-type-label";
 import { GoalProgress } from "@/components/goals/goal-progress";
 import { StreakBadge } from "@/components/goals/streak-badge";
+import { GlassFolder } from "@/components/ui/glass-folder";
 
 type Goal = {
   id: string;
@@ -30,8 +31,11 @@ export function GoalCard({
     <Link href={`/goals/${goal.id}`}>
       <Card className="h-full transition-colors hover:ring-foreground/20">
         <CardHeader>
-          <div className="flex items-center justify-between gap-2">
-            <CardTitle className="line-clamp-1">{goal.title}</CardTitle>
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <GlassFolder goalId={goal.id} size={28} className="shrink-0" />
+              <CardTitle className="line-clamp-1">{goal.title}</CardTitle>
+            </div>
             <GoalTypeBadge type={goal.type} />
           </div>
           {goal.description && (

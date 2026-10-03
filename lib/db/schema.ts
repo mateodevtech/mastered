@@ -232,6 +232,67 @@ export const badges = pgTable(
 );
 
 // -----------------------------------------------------------------------
+// Public API: API keys & webhooks
+// -----------------------------------------------------------------------
+
+export const apiKeys = pgTable("api_keys", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  // Only the hash is stored (same pattern as sessions/magic links) — the
+  // raw key is shown once at creation and cannot be recovered afterwards.
+  keyHash: text("key_hash").notNull().unique(),
+  // First chars of the raw key (e.g. "mk_live_ab12") kept in the clear so
+  // the user can recognize which key is which in the list UI.
+  keyPrefix: text("key_prefix").notNull(),
+  lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+  revokedAt: timestamp("revoked_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const webhookEventEnum = pgEnum("webhook_event", [
+  "task.completed",
+  "goal.completed",
+  "streak.broken",
+  "streak.milestone",
+]);
+
+export const webhookEndpoints = pgTable("webhook_endpoints", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  url: text("url").notNull(),
+  // Shown once at creation, like the API key — needed again on every
+  // delivery to sign the payload, so (unlike keyHash) it is stored in the
+  // clear, same as Stripe/GitHub webhook secrets.
+  secret: text("secret").notNull(),
+  events: jsonb("events").notNull().$type<string[]>(),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const webhookDeliveryStatusEnum = pgEnum("webhook_delivery_status", [
+  "success",
+  "failed",
+]);
+
+export const webhookDeliveries = pgTable("webhook_deliveries", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  webhookEndpointId: uuid("webhook_endpoint_id")
+    .notNull()
+    .references(() => webhookEndpoints.id, { onDelete: "cascade" }),
+  event: webhookEventEnum("event").notNull(),
+  payload: jsonb("payload").notNull(),
+  status: webhookDeliveryStatusEnum("status").notNull(),
+  responseStatus: integer("response_status"),
+  attempt: integer("attempt").notNull().default(1),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// -----------------------------------------------------------------------
 // Push notifications
 // -----------------------------------------------------------------------
 

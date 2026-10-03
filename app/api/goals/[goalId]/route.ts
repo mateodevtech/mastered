@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { goals } from "@/lib/db/schema";
 import { getGoalForUser } from "@/lib/db/queries/goals";
 import { updateGoalSchema } from "@/lib/validators/goals";
+import { triggerWebhookEvent } from "@/lib/webhooks/dispatch";
 
 export async function GET(
   _request: Request,
@@ -45,6 +46,13 @@ export async function PATCH(
     .set({ ...parsed.data, updatedAt: new Date() })
     .where(eq(goals.id, goalId))
     .returning();
+
+  if (parsed.data.status === "completed" && existing.status !== "completed") {
+    await triggerWebhookEvent(user.id, "goal.completed", {
+      goalId: updated.id,
+      goalTitle: updated.title,
+    });
+  }
 
   return NextResponse.json(updated);
 }

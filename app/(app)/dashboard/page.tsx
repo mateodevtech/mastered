@@ -3,27 +3,54 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { listGoalsForUser } from "@/lib/db/queries/goals";
 import {
   getActiveBlockingAlarmForUser,
+  getDailyCompletionForUser,
   getGoalProgressForUser,
+  getTodayCompletionForUser,
   getTodayTasksForUser,
 } from "@/lib/db/queries/dashboard";
-import { getStreaksForUser } from "@/lib/db/queries/streaks";
+import { getRecentBadgesForUser, getStreaksForUser, getTopStreakForUser } from "@/lib/db/queries/streaks";
+import { getActiveVeilleurSummaryForUser } from "@/lib/db/queries/veilleur";
 import { AlertTriangleIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { GoalCard } from "@/components/goals/goal-card";
 import { TaskRow } from "@/components/tasks/task-row";
+import { ProgressionCard } from "@/components/dashboard/progression-card";
+import { StreakHeroCard } from "@/components/dashboard/streak-hero-card";
+import { VeilleurSummaryCard } from "@/components/dashboard/veilleur-summary-card";
+import { GraceCard } from "@/components/dashboard/grace-card";
+import { TodayRadialCard } from "@/components/dashboard/today-radial-card";
+import { BadgesCard } from "@/components/dashboard/badges-card";
+
+const PROGRESSION_DAYS = 30;
 
 export default async function DashboardPage() {
   const user = await getCurrentUser();
   if (!user) return null;
 
-  const [goalsList, todayTasks, progress, activeAlarm, streaks] = await Promise.all([
+  const [
+    goalsList,
+    todayTasks,
+    progress,
+    activeAlarm,
+    streaks,
+    dailyCompletion,
+    todayCompletion,
+    topStreak,
+    veilleurSummary,
+    recentBadges,
+  ] = await Promise.all([
     listGoalsForUser(user.id),
     getTodayTasksForUser(user.id),
     getGoalProgressForUser(user.id),
     getActiveBlockingAlarmForUser(user.id),
     getStreaksForUser(user.id),
+    getDailyCompletionForUser(user.id, PROGRESSION_DAYS),
+    getTodayCompletionForUser(user.id),
+    getTopStreakForUser(user.id),
+    getActiveVeilleurSummaryForUser(user.id),
+    getRecentBadgesForUser(user.id, 4),
   ]);
 
   // This Server Component already reads the request-time session cookie
@@ -54,6 +81,23 @@ export default async function DashboardPage() {
         </h1>
         <p className="text-muted-foreground">{user.email}</p>
       </div>
+
+      <section className="grid gap-4 lg:grid-cols-3">
+        <ProgressionCard days={dailyCompletion} />
+        <StreakHeroCard top={topStreak ? { goalTitle: topStreak.goalTitle, currentCount: topStreak.streak.currentCount, longestCount: topStreak.streak.longestCount } : null} />
+        <VeilleurSummaryCard summary={veilleurSummary} />
+        <GraceCard streak={topStreak?.streak ?? null} />
+        <TodayRadialCard today={todayCompletion} />
+        <BadgesCard
+          badges={recentBadges.map((row) => ({
+            id: row.badge.id,
+            type: row.badge.type,
+            label: row.badge.label,
+            awardedAt: row.badge.awardedAt,
+            goalTitle: row.goalTitle,
+          }))}
+        />
+      </section>
 
       <section className="flex flex-col gap-4">
         <div className="flex items-center gap-2">
